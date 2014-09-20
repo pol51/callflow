@@ -43,14 +43,6 @@ done
   exit 1
 }
 
-if [[ -z "$FILTER" ]]; then
-  FARG=""
-  FVAL=""
-else
-  FARG="-R"
-  FVAL="$FILTER"
-fi
-
 if [[ -f colors ]]; then
   COLORS=$(cat colors)
 fi
@@ -125,15 +117,6 @@ Options:
   --browser
                 Launch a browser with the callflow.
 
-  --capture-filter <filter>, -f <filter>
-                A filter can be used to show only those frames that match the
-                given filter criteria.  This filter is for traces that have been
-                captured with programs such as wireshark, snoop, tcpdump, tshark
-                and the like.  $PRGNAME uses tshark's DISPLAY filter functionality
-                to filter the trace.  More information about tshark's DISPLAY
-                filter can be obtained from the tshark man page.
-                A useful filter for SIP traffic is "sip".
-
   --list-nodes, -o
                 List the unique nodes in the trace file
                 (Don't forget to redirect output in another file.
@@ -158,8 +141,7 @@ Options:
   --refresh-cache
                 Refresh the contents of the callflow.short and callflow.long
                 files.  By default these are cached.  The cache is automatically
-                refreshed, when a changed input file, or a different filter is
-                is used.
+                refreshed, when a changed input file is used.
 
   --remove-duplicate-frames, -d
                 Remove duplicate frames while computing.
@@ -185,7 +167,7 @@ readonly SHORTHELP="Usage: $PRGNAME [options] <filename>"
 # Command line argument parsing, the allowed arguments are
 # alphabetically listed, keep it this way please.
 LOPT="archive:,browser"
-LOPT="$LOPT,capture-filter:,help,list-nodes,no-archive,no-loops,no-sdp,no-time,nodenames:"
+LOPT="$LOPT,help,list-nodes,no-archive,no-loops,no-sdp,no-time,nodenames:"
 LOPT="$LOPT,refresh-cache,remove-duplicate-frames,title:,with-sdp,width-between-nodes:"
 LOPT="$LOPT,version"
 
@@ -213,11 +195,6 @@ while true; do
                          ;;
   --browser)
                          START_BROWSER="yes"
-                         ;;
-  --capture-filter|-f)
-                         # Overwrite the default filter previously red from the configuration file
-                         OPT_FILTER=$2; shift
-                         #echo " * Will use the following filter: $OPT_FILTER"
                          ;;
   --list-nodes|-o)
                          ORDER=1
@@ -275,16 +252,6 @@ if [[ ! -f "$inputfile" ]]; then
 else
   # TODO: what is the sed command doing precisely, is it really needed?
   DESTDIR=$(ls "$inputfile" | sed -r "s/(.+)\.(.+)/\1/");
-fi
-
-if [[ ! -z "$OPT_FILTER" ]]; then
-  if [[ "$OPT_FILTER" == "" ]]; then
-    FARG=""
-    FVAL=""
-  else
-    FARS="-R"
-    FVAL="$OPT_FILTER"
-  fi
 fi
 
 if [[ -z "$OPT_WIDTH_BETWEEN_NODES" ]]; then
@@ -400,17 +367,7 @@ else
 
       MD5_CACHE=$(awk -F"|" -v FILE=$FILE '{if ($1 == FILE) {print $2} }' $DESTDIR/metadb)
 
-      if [[ $MD5_FILE == $MD5_CACHE ]]; then
-
-        CACHED_FILTER=$(awk -F"|" -v FILE=$FILE '{if ($1 == FILE) {print $3} }' $DESTDIR/metadb)
-
-        # Are the cached filter and used filter the same?
-        if [[ "$FVAL" == "$CACHED_FILTER" ]]; then
-          USE_CACHE=yes
-        else
-          USE_CACHE=no
-        fi
-      else
+      if [[ $MD5_FILE != $MD5_CACHE ]]; then
         # The input file changed
         USE_CACHE=no
       fi
